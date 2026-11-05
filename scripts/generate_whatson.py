@@ -5,11 +5,12 @@ import requests
 
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+from google import genai
 
 EVENT_URL = "https://pro.tko.radio/presenter-daily/event-source/"
 
 # --------------------------------------------------
-# Download event page
+# Download page
 # --------------------------------------------------
 
 response = requests.get(EVENT_URL, timeout=30)
@@ -56,7 +57,6 @@ for item in soup.select("li.tko-event-item"):
     )
 
     if title:
-
         events.append(
             {
                 "title": title,
@@ -69,11 +69,11 @@ print(f"Events found: {len(events)}")
 
 if len(events) < 5:
     raise Exception(
-        f"Expected at least 5 events, only found {len(events)}"
+        f"Only found {len(events)} events."
     )
 
 # --------------------------------------------------
-# Load history
+# Event history
 # --------------------------------------------------
 
 try:
@@ -92,10 +92,6 @@ if len(available) < 5:
 
 selected = random.sample(available, 5)
 
-# --------------------------------------------------
-# Save updated history
-# --------------------------------------------------
-
 history.extend(
     [e["title"] for e in selected]
 )
@@ -106,42 +102,123 @@ with open("used_events.json", "w") as f:
     json.dump(history, f, indent=2)
 
 # --------------------------------------------------
-# Build bulletin
+# Spoken date
 # --------------------------------------------------
 
 tomorrow = datetime.now() + timedelta(days=1)
 
-date_string = tomorrow.strftime("%A %d %B %Y")
+day = tomorrow.day
 
-script = f"Here's what's happening today - {date_string}. "
+if 11 <= day <= 13:
+    suffix = "th"
+else:
+    suffix = {
+        1: "st",
+        2: "nd",
+        3: "rd"
+    }.get(day % 10, "th")
+
+spoken_date = (
+    f"{tomorrow.strftime('%A')} "
+    f"the {day}{suffix} of "
+    f"{tomorrow.strftime('%B')}"
+)
+
+# --------------------------------------------------
+# Event list for Gemini
+# --------------------------------------------------
+
+event_list = ""
 
 for event in selected:
 
-    title = event["title"]
-    location = event["location"]
+    event_list += f"""
+Title: {event['title']}
+Location: {event['location']}
+Time: {event['time']}
 
-    if location:
-        script += f"{title}, taking place at {location}. "
-    else:
-        script += f"{title}. "
+"""
 
-script += (
-    "You can get all the latest events for where you are, "
-    "from our website - visit tko dot radio for more!"
+# --------------------------------------------------
+# Gemini
+# --------------------------------------------------
+
+client = genai.Client(
+    api_key=os.environ["GEMINI_API_KEY"]
 )
+
+prompt = f"""
+You are writing a 45-second daily What's On guide
+for TKO Radio on the Costa Blanca.
+
+This is a prerecorded radio feature played between songs.
+
+Write for the ear, not the eye.
+
+STYLE:
+
+- Friendly
+- Conversational
+- Warm
+- Human
+- Natural spoken English
+- Local radio style
+- No corporate language
+- No bullet points
+
+REQUIREMENTS:
+
+- Mention all five events.
+- Mention locations naturally.
+- Vary sentence structure.
+- Use transitions such as:
+  Meanwhile
+  Elsewhere
+  Later on
+  Also worth checking out
+  If you're near
+- Avoid listing events mechanically.
+- Do not invent information.
+- Keep to approximately 100-120 words.
+
+OPEN EXACTLY WITH:
+
+Here's what's happening today - {spoken_date}.
+
+EVENTS:
+
+{event_list}
+
+CLOSE EXACTLY WITH:
+
+You can get all the latest events for where you are, from our website - visit tko dot radio for more!
+
+Return only the finished script.
+"""
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt
+)
+
+script = response.text.strip()
 
 # --------------------------------------------------
 # Save script
 # --------------------------------------------------
 
-with open("whatson.txt", "w", encoding="utf-8") as f:
+with open(
+    "whatson.txt",
+    "w",
+    encoding="utf-8"
+) as f:
     f.write(script)
 
-print("\nSCRIPT:\n")
+print("\nSCRIPT\n")
 print(script)
 
 # --------------------------------------------------
-# Generate ElevenLabs audio
+# ElevenLabs
 # --------------------------------------------------
 
 voice_id = os.environ["ELEVENLABS_VOICE_ID"]
@@ -155,21 +232,23 @@ payload = {
     "text": script,
     "model_id": "eleven_multilingual_v2",
     "voice_settings": {
-        "stability": 0.5,
-        "similarity_boost": 0.8
+        "stability": 0.35,
+        "similarity_boost": 0.75,
+        "style": 0.45,
+        "use_speaker_boost": True
     }
 }
 
-response = requests.post(
+tts_response = requests.post(
     f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
-    json=payload,
     headers=headers,
+    json=payload,
     timeout=120
 )
 
-response.raise_for_status()
+tts_response.raise_for_status()
 
 with open("whatson.mp3", "wb") as f:
-    f.write(response.content)
+    f.write(tts_response.content)
 
 print("MP3 generated successfully.")
