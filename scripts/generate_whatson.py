@@ -29,18 +29,33 @@ soup = BeautifulSoup(response.text, "html.parser")
 
 events = []
 
-#
-# YOU WILL PROBABLY NEED TO CHANGE THIS
-# AFTER INSPECTING debug.html
-#
+for item in soup.select("li.tko-event-item"):
 
-for item in soup.select(".event-item"):
-    text = item.get_text(" ", strip=True)
+    title_tag = item.select_one("strong")
+    date_tag = item.select_one(".tko-event-date")
+    location_tag = item.select_one(".tko-event-location")
 
-    if text:
-        events.append(text)
+    title = (
+        title_tag.get_text(strip=True)
+        if title_tag else ""
+    )
 
-events = list(dict.fromkeys(events))
+    date = (
+        date_tag.get_text(" ", strip=True)
+        if date_tag else ""
+    )
+
+    location = (
+        location_tag.get_text(" ", strip=True)
+        if location_tag else ""
+    )
+
+    if title:
+        events.append({
+            "title": title,
+            "date": date,
+            "location": location
+        })
 
 print(f"Events found: {len(events)}")
 
