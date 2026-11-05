@@ -1,3 +1,4 @@
+import os
 name: Daily WhatsOn Guide
 
 on:
