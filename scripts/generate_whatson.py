@@ -170,6 +170,12 @@ Requirements:
   "If you're near"
   "Also worth checking out"
   "Later on"
+  
+Do not rewrite venue names or place names.
+
+Preserve event titles exactly as supplied.
+
+Preserve location names exactly as supplied.
 
 Start EXACTLY with:
 
