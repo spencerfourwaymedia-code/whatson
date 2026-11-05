@@ -97,4 +97,79 @@ selected = random.sample(available, 5)
 # --------------------------------------------------
 
 history.extend(
-    [e["title"] for e in 
+    [e["title"] for e in selected]
+)
+
+history = history[-50:]
+
+with open("used_events.json", "w") as f:
+    json.dump(history, f, indent=2)
+
+# --------------------------------------------------
+# Build bulletin
+# --------------------------------------------------
+
+tomorrow = datetime.now() + timedelta(days=1)
+
+date_string = tomorrow.strftime("%A %d %B %Y")
+
+script = f"Here's what's happening today - {date_string}. "
+
+for event in selected:
+
+    title = event["title"]
+    location = event["location"]
+
+    if location:
+        script += f"{title}, taking place at {location}. "
+    else:
+        script += f"{title}. "
+
+script += (
+    "You can get all the latest events for where you are, "
+    "from our website - visit tko dot radio for more!"
+)
+
+# --------------------------------------------------
+# Save script
+# --------------------------------------------------
+
+with open("whatson.txt", "w", encoding="utf-8") as f:
+    f.write(script)
+
+print("\nSCRIPT:\n")
+print(script)
+
+# --------------------------------------------------
+# Generate ElevenLabs audio
+# --------------------------------------------------
+
+voice_id = os.environ["ELEVENLABS_VOICE_ID"]
+
+headers = {
+    "xi-api-key": os.environ["ELEVENLABS_API_KEY"],
+    "Content-Type": "application/json"
+}
+
+payload = {
+    "text": script,
+    "model_id": "eleven_multilingual_v2",
+    "voice_settings": {
+        "stability": 0.5,
+        "similarity_boost": 0.8
+    }
+}
+
+response = requests.post(
+    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+    json=payload,
+    headers=headers,
+    timeout=120
+)
+
+response.raise_for_status()
+
+with open("whatson.mp3", "wb") as f:
+    f.write(response.content)
+
+print("MP3 generated successfully.")
