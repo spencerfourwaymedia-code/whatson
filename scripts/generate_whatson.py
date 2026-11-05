@@ -148,53 +148,44 @@ client = genai.Client(
 )
 
 prompt = f"""
-You are writing a 45-second daily What's On guide
-for TKO Radio on the Costa Blanca.
+You are a professional British radio presenter.
 
-This is a prerecorded radio feature played between songs.
+Write a 45-second What's On guide for TKO Radio.
+
+This will be read aloud by an AI voice.
 
 Write for the ear, not the eye.
 
-STYLE:
+Requirements:
 
-- Friendly
-- Conversational
-- Warm
-- Human
-- Natural spoken English
-- Local radio style
-- No corporate language
-- No bullet points
-
-REQUIREMENTS:
-
-- Mention all five events.
+- Sound like local commercial radio.
+- Friendly and conversational.
+- Do not sound like a list.
+- Mention all 5 events.
 - Mention locations naturally.
-- Vary sentence structure.
-- Use transitions such as:
-  Meanwhile
-  Elsewhere
-  Later on
-  Also worth checking out
-  If you're near
-- Avoid listing events mechanically.
-- Do not invent information.
-- Keep to approximately 100-120 words.
+- Keep sentences short.
+- Use phrases like:
+  "Elsewhere"
+  "Meanwhile"
+  "If you're near"
+  "Also worth checking out"
+  "Later on"
 
-OPEN EXACTLY WITH:
+Start EXACTLY with:
 
 Here's what's happening today - {spoken_date}.
 
-EVENTS:
+Events:
 
 {event_list}
 
-CLOSE EXACTLY WITH:
+End EXACTLY with:
 
 You can get all the latest events for where you are, from our website - visit tko dot radio for more!
 
-Return only the finished script.
+Return only the script.
 """
+
 
 response = client.models.generate_content(
     model="gemini-3.8-flash",
