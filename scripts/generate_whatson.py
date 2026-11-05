@@ -387,7 +387,7 @@ if dropbox_token:
     headers = {
         "Authorization": f"Bearer {dropbox_token}",
         "Dropbox-API-Arg": json.dumps({
-            "path": "/Whatson/whatson_latest.mp3",
+            "path": "/Radio/Whatson/whatson_latest.mp3",
             "mode": "overwrite",
             "autorename": False,
             "mute": True
@@ -410,7 +410,7 @@ if dropbox_token:
     upload_response.raise_for_status()
 
     print(
-        "Dropbox upload successful: /Whatson/whatson_latest.mp3"
+        "Dropbox upload successful: /Radio/Whatson/whatson_latest.mp3"
     )
 
 else:
