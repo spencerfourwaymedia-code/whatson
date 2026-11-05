@@ -2,23 +2,19 @@ import os
 import json
 import random
 import requests
+
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-import google.generativeai as genai
 
 EVENT_URL = "https://pro.tko.radio/presenter-daily/event-source/"
 
-# Tomorrow's date
-
-tomorrow = datetime.now() + timedelta(days=1)
-
-date_string = tomorrow.strftime("%A %d %B %Y")
-
-# Download page
+# --------------------------------------------------
+# Download event page
+# --------------------------------------------------
 
 response = requests.get(EVENT_URL, timeout=30)
 
-print("STATUS:", response.status_code)
+print(f"STATUS: {response.status_code}")
 
 with open("debug.html", "w", encoding="utf-8") as f:
     f.write(response.text)
@@ -27,138 +23,78 @@ response.raise_for_status()
 
 soup = BeautifulSoup(response.text, "html.parser")
 
+# --------------------------------------------------
+# Extract events
+# --------------------------------------------------
+
 events = []
 
 for item in soup.select("li.tko-event-item"):
 
     title_tag = item.select_one("strong")
-    date_tag = item.select_one(".tko-event-date")
     location_tag = item.select_one(".tko-event-location")
+    date_tag = item.select_one(".tko-event-date")
 
     title = (
         title_tag.get_text(strip=True)
-        if title_tag else ""
-    )
-
-    date = (
-        date_tag.get_text(" ", strip=True)
-        if date_tag else ""
+        if title_tag
+        else None
     )
 
     location = (
         location_tag.get_text(" ", strip=True)
-        if location_tag else ""
+        .replace("Location:", "")
+        .strip()
+        if location_tag
+        else ""
+    )
+
+    event_time = (
+        date_tag.get_text(" ", strip=True)
+        if date_tag
+        else ""
     )
 
     if title:
-        events.append({
-            "title": title,
-            "date": date,
-            "location": location
-        })
+
+        events.append(
+            {
+                "title": title,
+                "location": location,
+                "time": event_time,
+            }
+        )
 
 print(f"Events found: {len(events)}")
 
-if not events:
+if len(events) < 5:
     raise Exception(
-        "No events found. Check debug.html and update CSS selector."
+        f"Expected at least 5 events, only found {len(events)}"
     )
 
-# Load event history
+# --------------------------------------------------
+# Load history
+# --------------------------------------------------
 
 try:
     with open("used_events.json", "r") as f:
         history = json.load(f)
-except:
+except Exception:
     history = []
 
-available = [e for e in events if e not in history]
+available = [
+    e for e in events
+    if e["title"] not in history
+]
 
 if len(available) < 5:
     available = events
 
-selected = random.sample(
-    available,
-    min(5, len(available))
-)
+selected = random.sample(available, 5)
 
-history.extend(selected)
+# --------------------------------------------------
+# Save updated history
+# --------------------------------------------------
 
-history = history[-35:]
-
-with open("used_events.json", "w") as f:
-    json.dump(history, f, indent=2)
-
-# Gemini
-
-genai.configure(
-    api_key=os.environ["GEMINI_API_KEY"]
-)
-
-model = genai.GenerativeModel("gemini-1.5-flash")
-
-event_list = "\n".join(
-    [f"- {event}" for event in selected]
-)
-
-prompt = f"""
-You are a Costa Blanca local radio presenter.
-
-Create a short and natural sounding radio bulletin.
-
-Requirements:
-
-- Around 45 seconds.
-- Mention all five events.
-- Use a friendly local radio tone.
-- Approximately 100 words.
-
-Start EXACTLY with:
-
-Here's what's happening today - {date_string}.
-
-Events:
-
-{event_list}
-
-Finish EXACTLY with:
-
-You can get all the latest events for where you are, from our website - visit tko dot radio for more!
-"""
-
-result = model.generate_content(prompt)
-
-script = result.text.strip()
-
-with open("whatson.txt", "w", encoding="utf-8") as f:
-    f.write(script)
-
-print(script)
-
-# ElevenLabs
-
-voice_id = os.environ["ELEVENLABS_VOICE_ID"]
-
-headers = {
-    "xi-api-key": os.environ["ELEVENLABS_API_KEY"],
-    "Content-Type": "application/json"
-}
-
-payload = {
-    "text": script,
-    "model_id": "eleven_multilingual_v2"
-}
-
-r = requests.post(
-    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
-    headers=headers,
-    json=payload,
-    timeout=60
-)
-
-r.raise_for_status()
-
-with open("whatson.mp3", "wb") as f:
-    f.write(r.content)
-
-print("MP3 created successfully")
+history.extend(
+    [e["title"] for e in 
