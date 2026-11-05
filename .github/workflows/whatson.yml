@@ -26,11 +26,10 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 google-generativeai
+          pip install requests beautifulsoup4
 
       - name: Generate WhatsOn Bulletin
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
         run: |
@@ -67,4 +66,7 @@ jobs:
 
           git add used_events.json
 
-          git diff --cached --quiet || git commit -m "Update event 
+          git diff --cached --quiet || git commit -m "Update event history"
+
+          git push
+        continue-on-error: true
