@@ -361,3 +361,48 @@ with open(
     f.write(tts_response.content)
 
 print("MP3 generated successfully.")
+
+# --------------------------------------------------
+# Upload to Dropbox
+# --------------------------------------------------
+
+dropbox_token = os.environ.get(
+    "DROPBOX_ACCESS_TOKEN"
+)
+
+if dropbox_token:
+
+    headers = {
+        "Authorization": f"Bearer {dropbox_token}",
+        "Dropbox-API-Arg": json.dumps({
+            "path": "/Whatson/whatson_latest.mp3",
+            "mode": "overwrite",
+            "autorename": False,
+            "mute": True
+        }),
+        "Content-Type": "application/octet-stream"
+    }
+
+    with open(
+        "whatson.mp3",
+        "rb"
+    ) as f:
+
+        upload_response = requests.post(
+            "https://content.dropboxapi.com/2/files/upload",
+            headers=headers,
+            data=f.read(),
+            timeout=120
+        )
+
+    upload_response.raise_for_status()
+
+    print(
+        "Dropbox upload successful: /Whatson/whatson_latest.mp3"
+    )
+
+else:
+
+    print(
+        "DROPBOX_ACCESS_TOKEN not configured"
+    )
