@@ -2,7 +2,7 @@ name: Costa Blanca WhatsOn Guide
 
 on:
   schedule:
-    - cron: '0 22 * * *'
+    - cron: "0 22 * * *"
 
   workflow_dispatch:
 
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  generate:
+  generate-whatson:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,7 +20,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install Dependencies
         run: |
@@ -32,11 +32,15 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
-          DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
+          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+
         run: |
           python scripts/generate_whatson.py
 
-      - name: Upload Script
+      - name: Upload Generated Script
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -60,7 +64,15 @@ jobs:
           path: debug.html
           if-no-files-found: ignore
 
-      - name: Update Event History
+      - name: Upload Event History
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: used-events
+          path: used_events.json
+          if-no-files-found: ignore
+
+      - name: Commit Updated Event History
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
@@ -70,4 +82,5 @@ jobs:
           git diff --cached --quiet || git commit -m "Update event history"
 
           git push
+
         continue-on-error: true
