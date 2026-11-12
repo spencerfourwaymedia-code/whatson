@@ -6,6 +6,10 @@ This script will be voiced by an AI presenter.
 
 The output must sound like a real radio presenter.
 
+Use event times to create the structure of the bulletin.
+
+Move through the day in chronological order whenever possible.
+
 STYLE
 
 - Warm
