@@ -1,4 +1,4 @@
-print("Starting script...")
+print("Starting script...", flush=True)
 
 import os
 print("Imported os")
