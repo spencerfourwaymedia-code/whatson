@@ -1,3 +1,25 @@
+print("Starting script...")
+
+import os
+print("Imported os")
+
+import json
+print("Imported json")
+
+import random
+print("Imported random")
+
+import requests
+print("Imported requests")
+
+from bs4 import BeautifulSoup
+print("Imported bs4")
+
+from datetime import datetime, timedelta
+print("Imported datetime")
+
+from google import genai
+print("Imported genai")
 import os
 import json
 import time
