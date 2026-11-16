@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import random
 import requests
 
@@ -82,21 +83,26 @@ def get_dropbox_access_token():
     )
 
     print(
-        "Dropbox token response:",
-        response.status_code
+        f"Dropbox token response: "
+        f"{response.status_code}"
     )
 
-    print(
-        response.text
-    )
+    if response.status_code != 200:
 
-    response.raise_for_status()
+        print(response.text)
 
-    return response.json()["access_token"]
+        raise Exception(
+            f"Dropbox token error: "
+            f"{response.text}"
+        )
+
+    return response.json()[
+        "access_token"
+    ]
 
 
 # --------------------------------------------------
-# Download Event Page
+# Download Page
 # --------------------------------------------------
 
 response = requests.get(
@@ -104,7 +110,9 @@ response = requests.get(
     timeout=30
 )
 
-print(f"STATUS: {response.status_code}")
+print(
+    f"STATUS: {response.status_code}"
+)
 
 with open(
     "debug.html",
@@ -127,15 +135,30 @@ soup = BeautifulSoup(
 
 events = []
 
-for item in soup.select("li.tko-event-item"):
+for item in soup.select(
+    "li.tko-event-item"
+):
 
-    title_tag = item.select_one("strong")
-    location_tag = item.select_one(".tko-event-location")
-    date_tag = item.select_one(".tko-event-date")
-    excerpt_tag = item.select_one(".tko-event-excerpt")
+    title_tag = item.select_one(
+        "strong"
+    )
+
+    location_tag = item.select_one(
+        ".tko-event-location"
+    )
+
+    date_tag = item.select_one(
+        ".tko-event-date"
+    )
+
+    excerpt_tag = item.select_one(
+        ".tko-event-excerpt"
+    )
 
     title = (
-        title_tag.get_text(strip=True)
+        title_tag.get_text(
+            strip=True
+        )
         if title_tag
         else ""
     )
@@ -144,10 +167,12 @@ for item in soup.select("li.tko-event-item"):
         location_tag.get_text(
             " ",
             strip=True
-        ).replace(
+        )
+        .replace(
             "Location:",
             ""
-        ).strip()
+        )
+        .strip()
         if location_tag
         else ""
     )
@@ -192,7 +217,7 @@ if len(events) < 5:
     )
 
 # --------------------------------------------------
-# Load History
+# History
 # --------------------------------------------------
 
 try:
@@ -215,6 +240,7 @@ available = [
 ]
 
 if len(available) < 5:
+
     available = events
 
 selected = random.sample(
@@ -271,7 +297,7 @@ spoken_day = (
 )
 
 # --------------------------------------------------
-# Prompt Template
+# Load Prompt
 # --------------------------------------------------
 
 with open(
@@ -283,7 +309,7 @@ with open(
     template = f.read()
 
 # --------------------------------------------------
-# Event List
+# Build Event List
 # --------------------------------------------------
 
 event_list = ""
@@ -302,10 +328,10 @@ Description: {event['excerpt']}
 # Gemini
 # --------------------------------------------------
 
-import time
-
 client = genai.Client(
-    api_key=os.environ["GEMINI_API_KEY"]
+    api_key=os.environ[
+        "GEMINI_API_KEY"
+    ]
 )
 
 prompt = f"""
@@ -327,7 +353,7 @@ CLOSE EXACTLY WITH:
 
 You can get all the latest events for where you are, from our website - visit tko dot radio for more!
 
-Return only the finished radio script.
+Return only the finished script.
 """
 
 script = None
@@ -337,12 +363,15 @@ for attempt in range(5):
     try:
 
         print(
-            f"Gemini attempt {attempt + 1}"
+            f"Gemini attempt "
+            f"{attempt + 1}"
         )
 
-        response = client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=prompt
+        response = (
+            client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=prompt
+            )
         )
 
         script = (
@@ -350,7 +379,7 @@ for attempt in range(5):
         )
 
         print(
-            "Gemini script generated successfully."
+            "Gemini script generated."
         )
 
         break
@@ -372,6 +401,10 @@ for attempt in range(5):
             )
 
             time.sleep(15)
+
+# --------------------------------------------------
+# Fallback Script
+# --------------------------------------------------
 
 if script is None:
 
