@@ -302,6 +302,8 @@ Description: {event['excerpt']}
 # Gemini
 # --------------------------------------------------
 
+import time
+
 client = genai.Client(
     api_key=os.environ["GEMINI_API_KEY"]
 )
@@ -328,23 +330,59 @@ You can get all the latest events for where you are, from our website - visit tk
 Return only the finished radio script.
 """
 
-try:
+script = None
 
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt
-    )
+for attempt in range(5):
 
-    script = response.text.strip()
+    try:
 
-except Exception as e:
+        print(
+            f"Gemini attempt {attempt + 1}"
+        )
+
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=prompt
+        )
+
+        script = (
+            response.text.strip()
+        )
+
+        print(
+            "Gemini script generated successfully."
+        )
+
+        break
+
+    except Exception as e:
+
+        print(
+            f"Gemini attempt "
+            f"{attempt + 1} failed:"
+        )
+
+        print(str(e))
+
+        if attempt < 4:
+
+            print(
+                "Waiting 15 seconds "
+                "before retry..."
+            )
+
+            time.sleep(15)
+
+if script is None:
 
     print(
-        f"Gemini failure: {e}"
+        "Gemini unavailable. "
+        "Using fallback script."
     )
 
     script = (
-        f"Here's what's happening on {spoken_day}. "
+        f"Here's what's happening on "
+        f"{spoken_day}. "
     )
 
     for event in selected:
@@ -355,8 +393,9 @@ except Exception as e:
         )
 
     script += (
-        "You can get all the latest events for where you are, "
-        "from our website - visit tko dot radio for more!"
+        "You can get all the latest events "
+        "for where you are, from our website "
+        "- visit tko dot radio for more!"
     )
 
 # --------------------------------------------------
