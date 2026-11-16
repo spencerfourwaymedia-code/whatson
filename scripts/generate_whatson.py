@@ -375,7 +375,7 @@ CLOSE EXACTLY WITH:
 
 You can get all the latest events for where you are, from our website - visit tko dot radio for more!
 
-Return only the finished script.
+Return only the finished radio script.
 """
 
 script = None
@@ -385,8 +385,8 @@ for attempt in range(5):
     try:
 
         print(
-            f"Gemini attempt "
-            f"{attempt + 1}"
+            f"Gemini attempt {attempt + 1}",
+            flush=True
         )
 
         response = (
@@ -401,51 +401,150 @@ for attempt in range(5):
         )
 
         print(
-            "Gemini script generated."
+            "Gemini script generated successfully.",
+            flush=True
         )
 
         break
 
     except Exception as e:
 
+        error_text = str(e)
+
         print(
-            f"Gemini attempt "
-            f"{attempt + 1} failed:"
+            f"Gemini attempt {attempt + 1} failed:",
+            flush=True
         )
 
-        print(str(e))
+        print(
+            error_text,
+            flush=True
+        )
+
+        #
+        # Quota exhausted
+        # Don't keep retrying.
+        #
+
+        if (
+            "RESOURCE_EXHAUSTED"
+            in error_text
+        ):
+
+            print(
+                "Gemini quota exhausted.",
+                flush=True
+            )
+
+            break
+
+        #
+        # Temporary failures
+        #
 
         if attempt < 4:
 
             print(
                 "Waiting 15 seconds "
-                "before retry..."
+                "before retry...",
+                flush=True
             )
 
             time.sleep(15)
 
 # --------------------------------------------------
-# Fallback Script
+# Radio Style Fallback
 # --------------------------------------------------
 
 if script is None:
 
     print(
-        "Gemini unavailable. "
-        "Using fallback script."
+        "Using radio presenter fallback.",
+        flush=True
     )
+
+    intro_phrases = [
+        "If you're looking for something to do today,",
+        "Getting things underway,",
+        "First up,",
+        "Starting the day off,"
+    ]
+
+    middle_phrases = [
+        "Elsewhere,",
+        "Meanwhile,",
+        "Also worth checking out,",
+        "Over in another part of the Costa Blanca,"
+    ]
+
+    ending_phrases = [
+        "Later on,",
+        "And if you're still out and about,",
+        "Looking ahead to the evening,",
+        "Rounding off the day's events,"
+    ]
 
     script = (
         f"Here's what's happening on "
         f"{spoken_day}. "
     )
 
-    for event in selected:
+    selected.sort(
+        key=lambda x: x["time"]
+    )
+
+    for index, event in enumerate(selected):
+
+        title = event["title"]
+
+        location = (
+            event["location"]
+            or "the Costa Blanca"
+        )
+
+        description = (
+            event["excerpt"]
+            .replace("\n", " ")
+            .strip()
+        )
+
+        if len(description) > 110:
+
+            description = (
+                description[:110]
+                .rsplit(" ", 1)[0]
+                + "..."
+            )
+
+        if index == 0:
+
+            transition = random.choice(
+                intro_phrases
+            )
+
+        elif index == len(selected) - 1:
+
+            transition = random.choice(
+                ending_phrases
+            )
+
+        else:
+
+            transition = random.choice(
+                middle_phrases
+            )
 
         script += (
-            f"{event['title']} "
-            f"at {event['location']}. "
+            f"{transition} "
+            f"{title} is at "
+            f"{location}. "
         )
+
+        if description:
+
+            script += (
+                f"{description} "
+            )
 
     script += (
         "You can get all the latest events "
