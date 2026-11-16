@@ -1,5 +1,62 @@
 print("Starting script...", flush=True)
 
+import re
+
+def clean_excerpt(excerpt, title):
+
+    if not excerpt:
+        return ""
+
+    excerpt = (
+        excerpt
+        .replace("\n", " ")
+        .replace("\r", " ")
+        .strip()
+    )
+
+    sentences = re.split(
+        r'(?<=[.!?])\s+',
+        excerpt
+    )
+
+    cleaned = []
+
+    for sentence in sentences:
+
+        sentence = sentence.strip()
+
+        if not sentence:
+            continue
+
+        # Skip obvious title repetition
+
+        if (
+            title.lower()
+            in sentence.lower()
+        ):
+            continue
+
+        cleaned.append(sentence)
+
+        # Keep maximum of 3 full sentences
+
+        if len(cleaned) >= 3:
+            break
+
+    result = " ".join(cleaned)
+
+    # Ensure final sentence is complete
+
+    if (
+        result
+        and not result.endswith(
+            (".", "!", "?")
+        )
+    ):
+        result += "."
+
+    return result
+
 import os
 print("Imported os")
 
@@ -502,19 +559,10 @@ if script is None:
             or "the Costa Blanca"
         )
 
-        description = (
-            event["excerpt"]
-            .replace("\n", " ")
-            .strip()
+        description = clean_excerpt(
+            event["excerpt"],
+            title
         )
-
-        if len(description) > 110:
-
-            description = (
-                description[:110]
-                .rsplit(" ", 1)[0]
-                + "..."
-            )
 
         if index == 0:
 
@@ -536,9 +584,18 @@ if script is None:
 
         script += (
             f"{transition} "
-            f"{title} is at "
-            f"{location}. "
+            f"{title}"
         )
+
+        if location:
+
+            script += (
+                f" at {location}. "
+            )
+
+        else:
+
+            script += ". "
 
         if description:
 
