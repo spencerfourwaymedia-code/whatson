@@ -81,6 +81,15 @@ def get_dropbox_access_token():
         timeout=30
     )
 
+    print(
+        "Dropbox token response:",
+        response.status_code
+    )
+
+    print(
+        response.text
+    )
+
     response.raise_for_status()
 
     return response.json()["access_token"]
