@@ -1,6 +1,74 @@
+import os
+import re
+import json
+import random
+import requests
+
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
+
 print("Starting script...", flush=True)
 
-import re
+EVENT_URL = "https://pro.tko.radio/presenter-daily/event-source/"
+
+
+# --------------------------------------------------
+# Cleanup
+# --------------------------------------------------
+
+def cleanup_script(text):
+
+    text = text.replace("*", "")
+    text = text.replace("..", ".")
+    text = text.replace("  ", " ")
+
+    return text.strip()
+
+
+# --------------------------------------------------
+# Pronunciations
+# --------------------------------------------------
+
+def apply_pronunciations(text):
+
+    try:
+
+        with open(
+            "pronunciations.json",
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+            replacements = json.load(f)
+
+        for original, replacement in replacements.items():
+
+            if original in text:
+
+                print(
+                    f"Pronunciation: "
+                    f"{original} -> {replacement}",
+                    flush=True
+                )
+
+                text = text.replace(
+                    original,
+                    replacement
+                )
+
+    except Exception as e:
+
+        print(
+            f"Pronunciation file error: {e}",
+            flush=True
+        )
+
+    return text
+
+
+# --------------------------------------------------
+# Excerpt Processing
+# --------------------------------------------------
 
 def clean_excerpt(excerpt, title):
 
@@ -28,24 +96,24 @@ def clean_excerpt(excerpt, title):
         if not sentence:
             continue
 
-        # Skip obvious title repetition
-
         if (
             title.lower()
             in sentence.lower()
         ):
             continue
 
-        cleaned.append(sentence)
+        cleaned.append(
+            sentence
+        )
 
-        # Keep maximum of 3 full sentences
+        #
+        # Maximum two sentences
+        #
 
-        if len(cleaned) >= 3:
+        if len(cleaned) >= 2:
             break
 
     result = " ".join(cleaned)
-
-    # Ensure final sentence is complete
 
     if (
         result
@@ -56,89 +124,6 @@ def clean_excerpt(excerpt, title):
         result += "."
 
     return result
-
-import os
-print("Imported os")
-
-import json
-print("Imported json")
-
-import random
-print("Imported random")
-
-import requests
-print("Imported requests")
-
-from bs4 import BeautifulSoup
-print("Imported bs4")
-
-from datetime import datetime, timedelta
-print("Imported datetime")
-
-from google import genai
-print("Imported genai")
-import os
-import json
-import time
-import random
-import requests
-
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-from google import genai
-
-EVENT_URL = "https://pro.tko.radio/presenter-daily/event-source/"
-
-
-# --------------------------------------------------
-# Pronunciations
-# --------------------------------------------------
-
-def apply_pronunciations(text):
-
-    try:
-
-        with open(
-            "pronunciations.json",
-            "r",
-            encoding="utf-8"
-        ) as f:
-
-            replacements = json.load(f)
-
-        for original, replacement in replacements.items():
-
-            if original in text:
-
-                print(
-                    f"Pronunciation: {original} -> {replacement}"
-                )
-
-                text = text.replace(
-                    original,
-                    replacement
-                )
-
-    except Exception as e:
-
-        print(
-            f"Pronunciation file error: {e}"
-        )
-
-    return text
-
-
-# --------------------------------------------------
-# Cleanup
-# --------------------------------------------------
-
-def cleanup_script(text):
-
-    text = text.replace("*", "")
-    text = text.replace("..", ".")
-    text = text.replace("  ", " ")
-
-    return text.strip()
 
 
 # --------------------------------------------------
@@ -152,27 +137,25 @@ def get_dropbox_access_token():
         data={
             "grant_type": "refresh_token",
             "refresh_token":
-                os.environ["DROPBOX_REFRESH_TOKEN"],
+                os.environ[
+                    "DROPBOX_REFRESH_TOKEN"
+                ],
             "client_id":
-                os.environ["DROPBOX_APP_KEY"],
+                os.environ[
+                    "DROPBOX_APP_KEY"
+                ],
             "client_secret":
-                os.environ["DROPBOX_APP_SECRET"]
+                os.environ[
+                    "DROPBOX_APP_SECRET"
+                ]
         },
         timeout=30
     )
 
-    print(
-        f"Dropbox token response: "
-        f"{response.status_code}"
-    )
-
     if response.status_code != 200:
 
-        print(response.text)
-
         raise Exception(
-            f"Dropbox token error: "
-            f"{response.text}"
+            response.text
         )
 
     return response.json()[
@@ -181,7 +164,7 @@ def get_dropbox_access_token():
 
 
 # --------------------------------------------------
-# Download Page
+# Download Event Page
 # --------------------------------------------------
 
 response = requests.get(
@@ -190,8 +173,11 @@ response = requests.get(
 )
 
 print(
-    f"STATUS: {response.status_code}"
+    f"STATUS: {response.status_code}",
+    flush=True
 )
+
+response.raise_for_status()
 
 with open(
     "debug.html",
@@ -199,9 +185,9 @@ with open(
     encoding="utf-8"
 ) as f:
 
-    f.write(response.text)
-
-response.raise_for_status()
+    f.write(
+        response.text
+    )
 
 soup = BeautifulSoup(
     response.text,
@@ -286,7 +272,8 @@ for item in soup.select(
         )
 
 print(
-    f"Events found: {len(events)}"
+    f"Events found: {len(events)}",
+    flush=True
 )
 
 if len(events) < 5:
@@ -296,7 +283,7 @@ if len(events) < 5:
     )
 
 # --------------------------------------------------
-# History
+# Load History
 # --------------------------------------------------
 
 try:
@@ -328,11 +315,15 @@ selected = random.sample(
 )
 
 print(
-    f"Selected {len(selected)} events"
+    f"Selected {len(selected)} events",
+    flush=True
 )
 
 history.extend(
-    [e["title"] for e in selected]
+    [
+        e["title"]
+        for e in selected
+    ]
 )
 
 history = history[-50:]
@@ -376,238 +367,104 @@ spoken_day = (
 )
 
 # --------------------------------------------------
-# Load Prompt
+# Generate Script
 # --------------------------------------------------
 
-with open(
-    "whatson-prompt.txt",
-    "r",
-    encoding="utf-8"
-) as f:
-
-    template = f.read()
-
-# --------------------------------------------------
-# Build Event List
-# --------------------------------------------------
-
-event_list = ""
-
-for event in selected:
-
-    event_list += f"""
-Title: {event['title']}
-Location: {event['location']}
-Time: {event['time']}
-Description: {event['excerpt']}
-
-"""
-
-# --------------------------------------------------
-# Gemini
-# --------------------------------------------------
-
-client = genai.Client(
-    api_key=os.environ[
-        "GEMINI_API_KEY"
-    ]
+print(
+    "Generating radio script...",
+    flush=True
 )
 
-prompt = f"""
-{template}
+intro_phrases = [
+    "If you're looking for something to do today,",
+    "Getting things underway,",
+    "First up,",
+    "Starting the day off,"
+]
 
-DAY
+middle_phrases = [
+    "Elsewhere,",
+    "Meanwhile,",
+    "Also worth checking out,",
+    "Over in another part of the Costa Blanca,"
+]
 
-{spoken_day}
+ending_phrases = [
+    "Later on,",
+    "Looking ahead to the evening,",
+    "And if you're still out and about,",
+    "Rounding off the day's events,"
+]
 
-EVENTS
+selected.sort(
+    key=lambda x: x["time"]
+)
 
-{event_list}
+script = (
+    f"Here's what's happening on "
+    f"{spoken_day}. "
+)
 
-OPEN EXACTLY WITH:
+for index, event in enumerate(
+    selected
+):
 
-Here's what's happening on {spoken_day}.
+    title = event["title"]
 
-CLOSE EXACTLY WITH:
-
-You can get all the latest events for where you are, from our website - visit tko dot radio for more!
-
-Return only the finished radio script.
-"""
-
-script = None
-
-for attempt in range(5):
-
-    try:
-
-        print(
-            f"Gemini attempt {attempt + 1}",
-            flush=True
-        )
-
-        response = (
-            client.models.generate_content(
-                model="gemini-3.8-flash",
-                contents=prompt
-            )
-        )
-
-        script = (
-            response.text.strip()
-        )
-
-        print(
-            "Gemini script generated successfully.",
-            flush=True
-        )
-
-        break
-
-    except Exception as e:
-
-        error_text = str(e)
-
-        print(
-            f"Gemini attempt {attempt + 1} failed:",
-            flush=True
-        )
-
-        print(
-            error_text,
-            flush=True
-        )
-
-        #
-        # Quota exhausted
-        # Don't keep retrying.
-        #
-
-        if (
-            "RESOURCE_EXHAUSTED"
-            in error_text
-        ):
-
-            print(
-                "Gemini quota exhausted.",
-                flush=True
-            )
-
-            break
-
-        #
-        # Temporary failures
-        #
-
-        if attempt < 4:
-
-            print(
-                "Waiting 15 seconds "
-                "before retry...",
-                flush=True
-            )
-
-            time.sleep(15)
-
-# --------------------------------------------------
-# Radio Style Fallback
-# --------------------------------------------------
-
-if script is None:
-
-    print(
-        "Using radio presenter fallback.",
-        flush=True
+    location = (
+        event["location"]
+        or "the Costa Blanca"
     )
 
-    intro_phrases = [
-        "If you're looking for something to do today,",
-        "Getting things underway,",
-        "First up,",
-        "Starting the day off,"
-    ]
-
-    middle_phrases = [
-        "Elsewhere,",
-        "Meanwhile,",
-        "Also worth checking out,",
-        "Over in another part of the Costa Blanca,"
-    ]
-
-    ending_phrases = [
-        "Later on,",
-        "And if you're still out and about,",
-        "Looking ahead to the evening,",
-        "Rounding off the day's events,"
-    ]
-
-    script = (
-        f"Here's what's happening on "
-        f"{spoken_day}. "
+    description = clean_excerpt(
+        event["excerpt"],
+        title
     )
 
-    selected.sort(
-        key=lambda x: x["time"]
-    )
+    if index == 0:
 
-    for index, event in enumerate(selected):
-
-        title = event["title"]
-
-        location = (
-            event["location"]
-            or "the Costa Blanca"
+        transition = random.choice(
+            intro_phrases
         )
 
-        description = clean_excerpt(
-            event["excerpt"],
-            title
+    elif index == len(selected) - 1:
+
+        transition = random.choice(
+            ending_phrases
         )
 
-        if index == 0:
+    else:
 
-            transition = random.choice(
-                intro_phrases
-            )
-
-        elif index == len(selected) - 1:
-
-            transition = random.choice(
-                ending_phrases
-            )
-
-        else:
-
-            transition = random.choice(
-                middle_phrases
-            )
-
-        script += (
-            f"{transition} "
-            f"{title}"
+        transition = random.choice(
+            middle_phrases
         )
-
-        if location:
-
-            script += (
-                f" at {location}. "
-            )
-
-        else:
-
-            script += ". "
-
-        if description:
-
-            script += (
-                f"{description} "
-            )
 
     script += (
-        "You can get all the latest events "
-        "for where you are, from our website "
-        "- visit tko dot radio for more!"
+        f"{transition} "
+        f"{title}"
     )
+
+    if location:
+
+        script += (
+            f" at {location}. "
+        )
+
+    else:
+
+        script += ". "
+
+    if description:
+
+        script += (
+            f"{description} "
+        )
+
+script += (
+    "You can get all the latest events "
+    "for where you are, from our website "
+    "- visit tko dot radio for more!"
+)
 
 # --------------------------------------------------
 # Process Script
@@ -629,8 +486,15 @@ with open(
 
     f.write(script)
 
-print("\nSCRIPT\n")
-print(script)
+print(
+    "\nSCRIPT\n",
+    flush=True
+)
+
+print(
+    script,
+    flush=True
+)
 
 # --------------------------------------------------
 # ElevenLabs
@@ -680,47 +544,71 @@ with open(
     )
 
 print(
-    "MP3 generated successfully."
+    "MP3 generated successfully.",
+    flush=True
 )
 
 # --------------------------------------------------
 # Dropbox Upload
 # --------------------------------------------------
 
-dropbox_token = (
-    get_dropbox_access_token()
-)
+try:
 
-headers = {
-    "Authorization":
-        f"Bearer {dropbox_token}",
-    "Dropbox-API-Arg":
-        json.dumps({
-            "path":
-                "/Radio/WhatsOn/whatson_latest.mp3",
-            "mode":
-                "overwrite",
-            "autorename":
-                False
-        }),
-    "Content-Type":
-        "application/octet-stream"
-}
-
-with open(
-    "whatson.mp3",
-    "rb"
-) as f:
-
-    upload_response = requests.post(
-        "https://content.dropboxapi.com/2/files/upload",
-        headers=headers,
-        data=f.read(),
-        timeout=120
+    print(
+        "Attempting Dropbox upload...",
+        flush=True
     )
 
-upload_response.raise_for_status()
+    dropbox_token = (
+        get_dropbox_access_token()
+    )
 
-print(
-    "Dropbox upload successful."
-)
+    headers = {
+        "Authorization":
+            f"Bearer {dropbox_token}",
+        "Dropbox-API-Arg":
+            json.dumps({
+                "path":
+                    "/Radio/WhatsOn/whatson_latest.mp3",
+                "mode":
+                    "overwrite",
+                "autorename":
+                    False
+            }),
+        "Content-Type":
+            "application/octet-stream"
+    }
+
+    with open(
+        "whatson.mp3",
+        "rb"
+    ) as f:
+
+        upload_response = requests.post(
+            "https://content.dropboxapi.com/2/files/upload",
+            headers=headers,
+            data=f.read(),
+            timeout=120
+        )
+
+    if upload_response.status_code != 200:
+
+        print(
+            f"Dropbox upload failed: "
+            f"{upload_response.text}",
+            flush=True
+        )
+
+    else:
+
+        print(
+            "Dropbox upload successful.",
+            flush=True
+        )
+
+except Exception as e:
+
+    print(
+        f"Dropbox upload skipped: {e}",
+        flush=True
+    )
