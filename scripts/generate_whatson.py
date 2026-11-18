@@ -70,71 +70,145 @@ def apply_pronunciations(text):
 # Excerpt Processing
 # --------------------------------------------------
 
-def radio_time(text):
+def speak_time(hour, minute, period):
 
-    replacements = {
-        "13:00": "one this afternoon",
-        "14:00": "two this afternoon",
-        "15:00": "three this afternoon",
-        "16:00": "four this afternoon",
-        "17:00": "five this afternoon",
-
-        "17:30": "half past five this afternoon",
-        "16:30": "half past four this afternoon",
-        "15:30": "half past three this afternoon",
-
-        "18:00": "six tonight",
-        "19:00": "seven tonight",
-        "20:00": "eight tonight",
-        "21:00": "nine tonight",
-        "22:00": "ten tonight",
-
-        "18:15": "quarter past six tonight",
-        "19:15": "quarter past seven tonight",
-        "20:15": "quarter past eight tonight",
-
-        "18:30": "half past six tonight",
-        "19:30": "half past seven tonight",
-        "20:30": "half past eight tonight",
-
-        "18:45": "quarter to seven tonight",
-        "19:45": "quarter to eight tonight",
-        "20:45": "quarter to nine tonight"
+    numbers = {
+        1: "one",
+        2: "two",
+        3: "three",
+        4: "four",
+        5: "five",
+        6: "six",
+        7: "seven",
+        8: "eight",
+        9: "nine",
+        10: "ten",
+        11: "eleven",
+        12: "twelve"
     }
 
-    for original, spoken in replacements.items():
+    hour = int(hour)
+    minute = int(minute)
 
-        text = text.replace(
-            original,
-            spoken
+    if minute == 0:
+        spoken = numbers[hour]
+
+    elif minute == 30:
+        spoken = (
+            f"half past {numbers[hour]}"
+        )
+
+    elif minute == 15:
+        spoken = (
+            f"quarter past {numbers[hour]}"
+        )
+
+    elif minute == 45:
+
+        next_hour = hour + 1
+
+        if next_hour > 12:
+            next_hour = 1
+
+        spoken = (
+            f"quarter to "
+            f"{numbers[next_hour]}"
+        )
+
+    else:
+
+        spoken = (
+            f"{numbers[hour]} "
+            f"{minute}"
+        )
+
+    if period.upper() == "PM":
+
+        if hour <= 5:
+            spoken += (
+                " this afternoon"
+            )
+
+        else:
+            spoken += (
+                " tonight"
+            )
+
+    return spoken
+
+def radio_time(text):
+
+    #
+    # Ranges
+    #
+
+    def replace_range(match):
+
+        start_hour = match.group(1)
+        start_min = match.group(2)
+
+        end_hour = match.group(3)
+        end_min = match.group(4)
+
+        period = match.group(5)
+
+        start = speak_time(
+            start_hour,
+            start_min,
+            period
+        )
+
+        end = speak_time(
+            end_hour,
+            end_min,
+            period
+        )
+
+        if period.upper() == "PM":
+
+            if int(end_hour) <= 5:
+                suffix = (
+                    " this afternoon"
+                )
+            else:
+                suffix = (
+                    " tonight"
+                )
+
+            start = start.replace(
+                suffix,
+                ""
+            )
+
+            end = end.replace(
+                suffix,
+                ""
+            )
+
+            return (
+                f"from {start} "
+                f"to {end}"
+                f"{suffix}"
+            )
+
+        return (
+            f"from {start} "
+            f"to {end}"
         )
 
     text = re.sub(
-        r"\b8pm\b",
-        "eight tonight",
+        r'(\d{1,2})[.:](\d{2})\s*(AM|PM)\s*(?:to|-|–)\s*(\d{1,2})[.:](\d{2})\s*(AM|PM)?',
+        lambda m: replace_range(
+            (
+                m.group(1),
+                m.group(2),
+                m.group(4),
+                m.group(5),
+                m.group(6) or m.group(3)
+            )
+        ),
         text,
-        flags=re.I
-    )
-
-    text = re.sub(
-        r"\b7pm\b",
-        "seven tonight",
-        text,
-        flags=re.I
-    )
-
-    text = re.sub(
-        r"\b6pm\b",
-        "six tonight",
-        text,
-        flags=re.I
-    )
-
-    text = re.sub(
-        r"\b5pm\b",
-        "five this afternoon",
-        text,
-        flags=re.I
+        flags=re.IGNORECASE
     )
 
     return text
