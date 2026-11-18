@@ -70,6 +70,75 @@ def apply_pronunciations(text):
 # Excerpt Processing
 # --------------------------------------------------
 
+def radio_time(text):
+
+    replacements = {
+        "13:00": "one this afternoon",
+        "14:00": "two this afternoon",
+        "15:00": "three this afternoon",
+        "16:00": "four this afternoon",
+        "17:00": "five this afternoon",
+
+        "17:30": "half past five this afternoon",
+        "16:30": "half past four this afternoon",
+        "15:30": "half past three this afternoon",
+
+        "18:00": "six tonight",
+        "19:00": "seven tonight",
+        "20:00": "eight tonight",
+        "21:00": "nine tonight",
+        "22:00": "ten tonight",
+
+        "18:15": "quarter past six tonight",
+        "19:15": "quarter past seven tonight",
+        "20:15": "quarter past eight tonight",
+
+        "18:30": "half past six tonight",
+        "19:30": "half past seven tonight",
+        "20:30": "half past eight tonight",
+
+        "18:45": "quarter to seven tonight",
+        "19:45": "quarter to eight tonight",
+        "20:45": "quarter to nine tonight"
+    }
+
+    for original, spoken in replacements.items():
+
+        text = text.replace(
+            original,
+            spoken
+        )
+
+    text = re.sub(
+        r"\b8pm\b",
+        "eight tonight",
+        text,
+        flags=re.I
+    )
+
+    text = re.sub(
+        r"\b7pm\b",
+        "seven tonight",
+        text,
+        flags=re.I
+    )
+
+    text = re.sub(
+        r"\b6pm\b",
+        "six tonight",
+        text,
+        flags=re.I
+    )
+
+    text = re.sub(
+        r"\b5pm\b",
+        "five this afternoon",
+        text,
+        flags=re.I
+    )
+
+    return text
+
 def clean_excerpt(excerpt, title):
 
     if not excerpt:
@@ -96,9 +165,12 @@ def clean_excerpt(excerpt, title):
         if not sentence:
             continue
 
-        if (
+        #
+        # Only remove title repetition
+        #
+
+        if sentence.lower().startswith(
             title.lower()
-            in sentence.lower()
         ):
             continue
 
@@ -107,7 +179,7 @@ def clean_excerpt(excerpt, title):
         )
 
         #
-        # Maximum two sentences
+        # Maximum two complete sentences
         #
 
         if len(cleaned) >= 2:
@@ -122,6 +194,10 @@ def clean_excerpt(excerpt, title):
         )
     ):
         result += "."
+
+    result = radio_time(
+        result
+    )
 
     return result
 
@@ -471,6 +547,10 @@ script += (
 # --------------------------------------------------
 
 script = cleanup_script(
+    script
+)
+
+script = radio_time(
     script
 )
 
