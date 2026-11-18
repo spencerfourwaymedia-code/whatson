@@ -138,78 +138,139 @@ def speak_time(hour, minute, period):
 
 def radio_time(text):
 
-    #
-    # Ranges
-    #
+    numbers = {
+        1: "one",
+        2: "two",
+        3: "three",
+        4: "four",
+        5: "five",
+        6: "six",
+        7: "seven",
+        8: "eight",
+        9: "nine",
+        10: "ten",
+        11: "eleven",
+        12: "twelve"
+    }
+
+    def speak_time(hour, minute):
+
+        hour = int(hour)
+        minute = int(minute)
+
+        if minute == 0:
+            return numbers[hour]
+
+        if minute == 15:
+            return f"quarter past {numbers[hour]}"
+
+        if minute == 30:
+            return f"half past {numbers[hour]}"
+
+        if minute == 45:
+
+            next_hour = hour + 1
+
+            if next_hour > 12:
+                next_hour = 1
+
+            return (
+                f"quarter to "
+                f"{numbers[next_hour]}"
+            )
+
+        return (
+            f"{numbers[hour]} "
+            f"{minute}"
+        )
 
     def replace_range(match):
 
         start_hour = match.group(1)
-        start_min = match.group(2)
+        start_min = match.group(2) or "00"
 
         end_hour = match.group(3)
-        end_min = match.group(4)
+        end_min = match.group(4) or "00"
 
-        period = match.group(5)
+        period = match.group(5).upper()
 
         start = speak_time(
             start_hour,
-            start_min,
-            period
+            start_min
         )
 
         end = speak_time(
             end_hour,
-            end_min,
-            period
+            end_min
         )
 
-        if period.upper() == "PM":
+        if period == "PM":
 
             if int(end_hour) <= 5:
                 suffix = (
-                    " this afternoon"
+                    "this afternoon"
                 )
             else:
                 suffix = (
-                    " tonight"
+                    "tonight"
                 )
 
-            start = start.replace(
-                suffix,
-                ""
-            )
-
-            end = end.replace(
-                suffix,
-                ""
-            )
-
-            return (
-                f"from {start} "
-                f"to {end}"
-                f"{suffix}"
+        else:
+            suffix = (
+                "in the morning"
             )
 
         return (
             f"from {start} "
-            f"to {end}"
+            f"to {end} "
+            f"{suffix}"
         )
 
+    #
+    # Handle ranges
+    #
+
     text = re.sub(
-        r'(\d{1,2})[.:](\d{2})\s*(AM|PM)\s*(?:to|-|–)\s*(\d{1,2})[.:](\d{2})\s*(AM|PM)?',
-        lambda m: replace_range(
-            (
-                m.group(1),
-                m.group(2),
-                m.group(4),
-                m.group(5),
-                m.group(6) or m.group(3)
-            )
-        ),
+        r'(\d{1,2})[.:]?(\d{2})?\s*(?:AM|PM)?\s*(?:to|-|–)\s*(\d{1,2})[.:]?(\d{2})?\s*(AM|PM)',
+        replace_range,
         text,
         flags=re.IGNORECASE
     )
+
+    #
+    # Individual times
+    #
+
+    replacements = {
+        "13:00": "one this afternoon",
+        "14:00": "two this afternoon",
+        "15:00": "three this afternoon",
+        "16:00": "four this afternoon",
+        "17:00": "five this afternoon",
+
+        "18:00": "six tonight",
+        "19:00": "seven tonight",
+        "20:00": "eight tonight",
+        "21:00": "nine tonight",
+        "22:00": "ten tonight",
+
+        "18:30": "half past six tonight",
+        "19:30": "half past seven tonight",
+        "20:30": "half past eight tonight",
+
+        "18:15": "quarter past six tonight",
+        "19:15": "quarter past seven tonight",
+
+        "18:45": "quarter to seven tonight",
+        "19:45": "quarter to eight tonight"
+    }
+
+    for original, spoken in replacements.items():
+
+        text = text.replace(
+            original,
+            spoken
+        )
 
     return text
 
