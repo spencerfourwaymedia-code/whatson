@@ -670,10 +670,9 @@ for index, event in enumerate(selected):
     )
 
     transition = get_transition(
-        title,
-        description,
-        index
-    )
+    event["category"],
+    index
+)
 
     #
     # Build sentence
