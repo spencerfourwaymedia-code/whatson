@@ -70,72 +70,6 @@ def apply_pronunciations(text):
 # Excerpt Processing
 # --------------------------------------------------
 
-def speak_time(hour, minute, period):
-
-    numbers = {
-        1: "one",
-        2: "two",
-        3: "three",
-        4: "four",
-        5: "five",
-        6: "six",
-        7: "seven",
-        8: "eight",
-        9: "nine",
-        10: "ten",
-        11: "eleven",
-        12: "twelve"
-    }
-
-    hour = int(hour)
-    minute = int(minute)
-
-    if minute == 0:
-        spoken = numbers[hour]
-
-    elif minute == 30:
-        spoken = (
-            f"half past {numbers[hour]}"
-        )
-
-    elif minute == 15:
-        spoken = (
-            f"quarter past {numbers[hour]}"
-        )
-
-    elif minute == 45:
-
-        next_hour = hour + 1
-
-        if next_hour > 12:
-            next_hour = 1
-
-        spoken = (
-            f"quarter to "
-            f"{numbers[next_hour]}"
-        )
-
-    else:
-
-        spoken = (
-            f"{numbers[hour]} "
-            f"{minute}"
-        )
-
-    if period.upper() == "PM":
-
-        if hour <= 5:
-            spoken += (
-                " this afternoon"
-            )
-
-        else:
-            spoken += (
-                " tonight"
-            )
-
-    return spoken
-
 def radio_time(text):
 
     numbers = {
@@ -335,6 +269,76 @@ def clean_excerpt(excerpt, title):
     )
 
     return result
+def get_transition(
+    category,
+    position
+):
+
+    category = (
+        category or ""
+    ).lower()
+
+    if position == 0:
+
+        return random.choice([
+            "Getting things underway,",
+            "To start the day,",
+            "First on the list,"
+        ])
+
+    categories = {
+
+        "gaming": [
+            "Fancy testing your skills?",
+            "Looking for a challenge?",
+            "Gamers can enjoy"
+        ],
+
+        "quiz": [
+            "Fancy testing your knowledge?",
+            "For quiz lovers,",
+            "If you enjoy a challenge,"
+        ],
+
+        "music": [
+            "If music is more your thing,",
+            "For live entertainment,",
+            "Looking for some music?"
+        ],
+
+        "karaoke": [
+            "If singing is your thing,",
+            "Karaoke fans are in luck,",
+            "Feeling brave enough for the microphone?"
+        ],
+
+        "bingo": [
+            "Eyes down for a full house,",
+            "For a traditional night out,",
+            "Bingo fans can enjoy"
+        ],
+
+        "sports": [
+            "For something active,",
+            "Sports fans can enjoy",
+            "Getting competitive?"
+        ]
+    }
+
+    for key, phrases in categories.items():
+
+        if key in category:
+
+            return random.choice(
+                phrases
+            )
+
+    return random.choice([
+        "Meanwhile,",
+        "Elsewhere across the Costa Blanca,",
+        "Also taking place,",
+        "Another event worth checking out,"
+    ])
 
 
 # --------------------------------------------------
@@ -431,6 +435,10 @@ for item in soup.select(
         ".tko-event-excerpt"
     )
 
+    category_tag = item.select_one(
+    ".tko-event-category-name"
+)
+
     title = (
         title_tag.get_text(
             strip=True
@@ -470,6 +478,13 @@ for item in soup.select(
         if excerpt_tag
         else ""
     )
+    category = (
+    category_tag.get_text(
+        strip=True
+    )
+    if category_tag
+    else ""
+)
 
     if title:
 
@@ -478,7 +493,8 @@ for item in soup.select(
                 "title": title,
                 "location": location,
                 "time": event_time,
-                "excerpt": excerpt
+                "excerpt": excerpt,
+                "category": category
             }
         )
 
@@ -607,24 +623,45 @@ ending_phrases = [
     "Rounding off the day's events,"
 ]
 
-selected.sort(
-    key=lambda x: x["time"]
-)
+
 
 script = (
     f"Here's what's happening on "
     f"{spoken_day}. "
 )
 
-for index, event in enumerate(
-    selected
-):
+for index, event in enumerate(selected):
 
     title = event["title"]
 
+    #
+    # Clean up common title formats
+    #
+
+    title = title.replace(
+        "Live Music with ",
+        ""
+    )
+
+    title = title.replace(
+        "Live Music - ",
+        ""
+    )
+
+    title = title.replace(
+        "SpeedQuiz with ",
+        ""
+    )
+
+    title = title.replace(
+        "Karaoke with ",
+        ""
+    )
+
     location = (
         event["location"]
-        or "the Costa Blanca"
+        if event["location"]
+        else ""
     )
 
     description = clean_excerpt(
@@ -632,38 +669,36 @@ for index, event in enumerate(
         title
     )
 
-    if index == 0:
+    transition = get_transition(
+        title,
+        description,
+        index
+    )
 
-        transition = random.choice(
-            intro_phrases
-        )
-
-    elif index == len(selected) - 1:
-
-        transition = random.choice(
-            ending_phrases
-        )
-
-    else:
-
-        transition = random.choice(
-            middle_phrases
-        )
+    #
+    # Build sentence
+    #
 
     script += (
         f"{transition} "
-        f"{title}"
     )
 
     if location:
 
         script += (
-            f" at {location}. "
+            f"{title} is taking place at "
+            f"{location}. "
         )
 
     else:
 
-        script += ". "
+        script += (
+            f"{title}. "
+        )
+
+    #
+    # Add description if available
+    #
 
     if description:
 
