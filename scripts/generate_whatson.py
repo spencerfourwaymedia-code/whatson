@@ -213,6 +213,26 @@ def clean_excerpt(excerpt, title):
     if not excerpt:
         return ""
 
+    junk_phrases = [
+    "Join us",
+    "Come along",
+    "Everyone welcome",
+    "All welcome",
+    "Register now",
+    "Book now",
+    "Reserve your place",
+    "Get your tickets"
+]
+
+for phrase in junk_phrases:
+
+    excerpt = re.sub(
+        re.escape(phrase),
+        "",
+        excerpt,
+        flags=re.IGNORECASE
+    )
+
     excerpt = (
         excerpt
         .replace("\n", " ")
