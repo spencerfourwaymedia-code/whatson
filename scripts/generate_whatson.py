@@ -840,6 +840,12 @@ try:
             timeout=120
         )
 
+    print(
+    f"Dropbox token response: "
+    f"{response.status_code}",
+    flush=True
+)
+
     if upload_response.status_code != 200:
 
         print(
