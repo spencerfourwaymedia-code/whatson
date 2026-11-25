@@ -214,24 +214,24 @@ def clean_excerpt(excerpt, title):
         return ""
 
     junk_phrases = [
-    "Join us",
-    "Come along",
-    "Everyone welcome",
-    "All welcome",
-    "Register now",
-    "Book now",
-    "Reserve your place",
-    "Get your tickets"
-]
+        "Join us",
+        "Come along",
+        "Everyone welcome",
+        "All welcome",
+        "Register now",
+        "Book now",
+        "Reserve your place",
+        "Get your tickets"
+    ]
 
-for phrase in junk_phrases:
+    for phrase in junk_phrases:
 
-    excerpt = re.sub(
-        re.escape(phrase),
-        "",
-        excerpt,
-        flags=re.IGNORECASE
-    )
+        excerpt = re.sub(
+            re.escape(phrase),
+            "",
+            excerpt,
+            flags=re.IGNORECASE
+        )
 
     excerpt = (
         excerpt
@@ -254,10 +254,6 @@ for phrase in junk_phrases:
         if not sentence:
             continue
 
-        #
-        # Only remove title repetition
-        #
-
         if sentence.lower().startswith(
             title.lower()
         ):
@@ -266,10 +262,6 @@ for phrase in junk_phrases:
         cleaned.append(
             sentence
         )
-
-        #
-        # Maximum two complete sentences
-        #
 
         if len(cleaned) >= 2:
             break
