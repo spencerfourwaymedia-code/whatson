@@ -348,21 +348,22 @@ def get_transition(
 def get_dropbox_access_token():
 
     print(
-    "Dropbox credentials detected",
-    flush=True
-)
+        "Dropbox credentials detected",
+        flush=True
+    )
 
-print(
-    f"APP KEY length: "
-    f"{len(os.environ['DROPBOX_APP_KEY'])}",
-    flush=True
-)
+    print(
+        f"APP KEY length: "
+        f"{len(os.environ['DROPBOX_APP_KEY'])}",
+        flush=True
+    )
 
-print(
-    f"REFRESH TOKEN length: "
-    f"{len(os.environ['DROPBOX_REFRESH_TOKEN'])}",
-    flush=True
-)
+    print(
+        f"REFRESH TOKEN length: "
+        f"{len(os.environ['DROPBOX_REFRESH_TOKEN'])}",
+        flush=True
+    )
+
     response = requests.post(
         "https://api.dropboxapi.com/oauth2/token",
         data={
